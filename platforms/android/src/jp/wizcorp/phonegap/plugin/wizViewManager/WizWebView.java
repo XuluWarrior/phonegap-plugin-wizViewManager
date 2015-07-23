@@ -15,8 +15,11 @@ package jp.wizcorp.phonegap.plugin.wizViewManager;
 import android.app.Activity;
 import android.content.res.AssetManager;
 import android.graphics.Color;
+import android.net.MailTo;
+import android.net.Uri;
 import android.os.Build;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.ViewGroup;
 import android.webkit.MimeTypeMap;
 import android.widget.RelativeLayout;
@@ -27,6 +30,8 @@ import org.json.JSONObject;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.util.Log;
 import android.view.View;
 import android.webkit.WebSettings;
@@ -48,6 +53,8 @@ public class WizWebView extends WebView  {
     private CallbackContext create_cb;
     private CallbackContext load_cb;
     private Context mContext;
+    WebView myWebView;
+    
 
     static final FrameLayout.LayoutParams COVER_SCREEN_GRAVITY_CENTER =
             new FrameLayout.LayoutParams(
@@ -55,7 +62,41 @@ public class WizWebView extends WebView  {
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     Gravity.CENTER);
 
-    public WizWebView(String viewName, JSONObject settings, Context context, CallbackContext callbackContext) {
+    
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if(event.getAction() == KeyEvent.ACTION_DOWN){
+            switch(keyCode)
+            {
+            case KeyEvent.KEYCODE_BACK:
+            	if(myWebView!=null){
+                if(myWebView.canGoBack()){
+                    myWebView.goBack();
+                }else{
+                   //this
+                	SharedPreferences sharedPref = mContext.getSharedPreferences("PUSHDATA", Context.MODE_PRIVATE);
+        			String viewName = sharedPref.getString("ViewName", "newView");
+        			System.out.println("Onkey press view name "+viewName);
+        			if(viewName.equals("PushView")){
+	        			ViewGroup viewGroup=(ViewGroup) this.getParent();
+	        			viewGroup.removeView(this);
+	        			viewGroup.getChildCount();
+	        			WizViewManagerPlugin.viewList.remove(viewName);
+	        			WizViewManagerPlugin.updateViewList();
+        			}else{
+                	 final Activity activity=(Activity) getContext();
+                	 activity.finish();
+        			}
+                }
+            	}
+                return true;
+            }
+
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+    
+    @SuppressLint("NewApi") public WizWebView(String viewName, JSONObject settings, Context context, CallbackContext callbackContext) {
         // Constructor method
         super(context);
 
@@ -82,7 +123,7 @@ public class WizWebView extends WebView  {
         // The default is false.
         // The built-in mechanisms are the only currently supported zoom mechanisms, 
         // so it is recommended that this setting is always enabled.
-        webSettings.setBuiltInZoomControls(true);
+        webSettings.setBuiltInZoomControls(false);
         webSettings.setLoadWithOverviewMode(true);
         webSettings.setUseWideViewPort(true);
 
@@ -113,12 +154,15 @@ public class WizWebView extends WebView  {
 
         // Set a transparent background
         this.setBackgroundColor(Color.TRANSPARENT);
+        final Activity activity=(Activity) context;
         if (Build.VERSION.SDK_INT >= 11) this.setLayerType(WebView.LAYER_TYPE_SOFTWARE, null);
 
         // Override url loading on WebViewClient
         this.setWebViewClient(new WebViewClient () {
-            @Override
+            @SuppressLint("NewApi") @Override
             public boolean shouldOverrideUrlLoading(WebView wView, String url) {
+            	
+            	myWebView = wView;
                 Log.d("WizWebView", "[WizWebView] ****** " + url);
 
                 String[] urlArray;
@@ -126,6 +170,25 @@ public class WizWebView extends WebView  {
 
                 // Split url by only 2 in the event "://" occurs elsewhere (SHOULD be impossible because you string encoded right!?)
                 urlArray = url.split(splitter,2);
+                
+                if (url.startsWith("mailto:")) {
+                    
+                    if (activity != null) {
+                      MailTo mt = MailTo.parse(url);
+                      Intent i = newEmailIntent(activity, mt.getTo(), mt.getSubject(), mt.getBody(), mt.getCc());
+                      activity.startActivity(i);
+                      
+                      return true;
+                    }
+                  } else if (url.startsWith("tel:")) {
+                      
+                      if (activity != null) {
+                    	 Intent intent = new Intent(Intent.ACTION_DIAL);
+                    	 intent.setData(Uri.parse(url));  
+                        activity.startActivity(intent); 
+                        return true;
+                      }
+                    } else  {
 
                 if (urlArray[0].equalsIgnoreCase("wizpostmessage")) {
 
@@ -200,8 +263,21 @@ public class WizWebView extends WebView  {
                     // app will handle this url, don't change the browser url
                     return true;
                 }
+               }
                 // allow all other url requests
                 return false;
+            }
+            
+            
+            
+            private Intent newEmailIntent(Context context, String address, String subject, String body, String cc) {
+                Intent intent = new Intent(Intent.ACTION_SEND);
+                intent.putExtra(Intent.EXTRA_EMAIL, new String[] { address });
+                intent.putExtra(Intent.EXTRA_TEXT, body);
+                intent.putExtra(Intent.EXTRA_SUBJECT, subject);
+                intent.putExtra(Intent.EXTRA_CC, cc);
+                intent.setType("message/rfc822");
+                return intent;
             }
 
             @Override
@@ -453,6 +529,8 @@ public class WizWebView extends WebView  {
             Log.d(TAG, "No source to load");
         }
     }
+    
+    
 
     public void load(String source, CallbackContext callbackContext) {
         // Link up our callback
@@ -565,4 +643,3 @@ public class WizWebView extends WebView  {
         }
     }
 }
-
