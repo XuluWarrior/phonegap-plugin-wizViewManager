@@ -27,6 +27,7 @@ import android.os.Build;
 import android.util.Log;
 import android.view.View;
 import android.webkit.WebView;
+import android.webkit.WebSettings;
 
 import java.io.ByteArrayInputStream;
 
@@ -86,10 +87,13 @@ import java.io.ByteArrayInputStream;
         webView.getView().post(new Runnable() {
             @Override
             public void run() {
-            	//webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-                //webView.getSettings().setDomStorageEnabled(true);
-                //webView.getSettings().setLoadWithOverviewMode(true);
-                //webView.getSettings().setUseWideViewPort(true);
+            	webView.getView().setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+		
+		WebSettings settings;
+		settings = ((WebView) webView.getView()).getSettings();
+                settings.setDomStorageEnabled(true);
+                settings.setLoadWithOverviewMode(true);
+                settings.setUseWideViewPort(true);
             }
         });
     }
