@@ -66,14 +66,14 @@ import java.io.ByteArrayInputStream;
             try {
                 viewList.put("mainView", webView);
                 // To avoid "method was called on thread 'JavaBridge'" error we use a runnable
-                ((View) webView).post(new Runnable() {
+                webView.getView().post(new Runnable() {
                     @Override
                     public void run() {
                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
                             // Only for Kitkat and newer versions
-                            ((WebView) webView).evaluateJavascript("window.name = 'mainView';", null);
+                            webView.sendJavascript("window.name = 'mainView';");
                         } else {
-                            ((WebView) webView).loadUrl("javascript:window.name = 'mainView';");
+                            webView.loadUrl("javascript:window.name = 'mainView';");
                         }
                     }
                 });
@@ -83,13 +83,13 @@ import java.io.ByteArrayInputStream;
             }
         }
         super.initialize(cordova, webView);
-        ((View) webView).post(new Runnable() {
+        webView.getView().post(new Runnable() {
             @Override
             public void run() {
-            	((View) webView).setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-                ((WebView) webView).getSettings().setDomStorageEnabled(true);
-                ((WebView) webView).getSettings().setLoadWithOverviewMode(true);
-                ((WebView) webView).getSettings().setUseWideViewPort(true);
+            	//webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+                //webView.getSettings().setDomStorageEnabled(true);
+                //webView.getSettings().setLoadWithOverviewMode(true);
+                //webView.getSettings().setUseWideViewPort(true);
             }
         });
     }
